@@ -16,13 +16,13 @@
   <script>
     var swfobject = {};
     var isEmbedded = false;
+    var random = Math.floor((Math.random() * 3));
 
     swfobject.embedSWF = function(url, cont, width, height){
         if (isEmbedded) {
           return; // Skip embedding if already embedded
         }
 
-        var random = Math.floor((Math.random() * 3));
         var ruffle = window.RufflePlayer.newest();
         var player = Object.assign(document.getElementById(cont).appendChild(ruffle.createPlayer()), {
             width: width,
