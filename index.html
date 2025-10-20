@@ -16,7 +16,7 @@
   <script>
     var swfobject = {};
     var isEmbedded = false;
-    var random = Math.floor((Math.random() * 3));
+    var random = Math.floor((Math.random() * 5));
 
     swfobject.embedSWF = function(url, cont, width, height){
         if (isEmbedded) {
@@ -41,8 +41,14 @@
       else if (random == 2) {
         swfobject.embedSWF("https://justtyler-png.github.io/Flash-Games/Patched%20Run%203.swf", 'ruffle', 800, 600);
       } 
-      else {
+      else if (random == 3) {
         swfobject.embedSWF("https://justtyler-png.github.io/Flash-Games/ducklife4.swf", 'ruffle', 800, 600);
+      }
+      else if (random == 4) {
+        swfobject.embedSWF("https://justtyler-png.github.io/Flash-Games/run.swf", 'ruffle', 800, 600);
+      }
+      else {
+        swfobject.embedSWF("https://justtyler-png.github.io/Flash-Games/bloonsplayerpack2.swf", 'ruffle', 800, 600);
       }
     });
   </script>
