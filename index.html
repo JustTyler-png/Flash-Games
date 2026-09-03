@@ -2,40 +2,57 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="title" content="Ruffle Example">
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <meta name="language" content="English">
-  <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
   <title>Ruffle Example</title>
-  <script src="main.js"></script>
+  <!-- Load Ruffle first -->
+  <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
 </head>
 <body>
-  <div id='ruffle' class="gameloc"></div>
+  <div id="ruffle" class="gameloc"></div>
+
   <script>
+    // Get viewport dimensions immediately on execution
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     var swfobject = {};
     var isEmbedded = false;
-    var random = Math.floor((Math.random() * 6));
 
-    swfobject.embedSWF = function(url, cont, width, height){
-        if (isEmbedded) {
-          return; // Skip embedding if already embedded
+    swfobject.embedSWF = function(url, cont, width, height) {
+        if (isEmbedded) return; 
+
+        // Access the Ruffle API
+        const ruffle = window.RufflePlayer.newest();
+        const container = document.getElementById(cont);
+        
+        if (!container) {
+            console.error("Container element not found");
+            return;
         }
 
-        var ruffle = window.RufflePlayer.newest();
-        var player = Object.assign(document.getElementById(cont).appendChild(ruffle.createPlayer()), {
+        // Create the player element
+        const player = ruffle.createPlayer();
+        container.appendChild(player);
+
+        // Correctly assign properties and styles
+        Object.assign(player, {
             width: width,
-            height: height,
-            style: 'width: ' + width + 'px; height: ' + height + 'px', display = 'block', border = 'none', padding = '0', margin = '0',
+            height: height
         });
 
+        // Apply CSS styles properly
+        player.style.width = width + 'px';
+        player.style.height = height + 'px';
+        player.style.display = 'block';
+        player.style.border = 'none';
+        player.style.padding = '0';
+        player.style.margin = '0';
+
+        // Load the SWF file
         player.load({ url: url });
         isEmbedded = true;
     };
-    
+         
+    // Trigger when DOM is ready
     document.addEventListener('DOMContentLoaded', function () {
       swfobject.embedSWF("https://justtyler-png.github.io/Flash-Games/tboi.swf", 'ruffle', viewportWidth, viewportHeight);
     });
