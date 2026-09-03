@@ -1,58 +1,43 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="margin:0;padding:0;overflow:hidden;width:100%;height:100%;">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ruffle Example</title>
-  <!-- Load Ruffle first -->
   <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
 </head>
-<body>
-  <div id="ruffle" class="gameloc"></div>
-
+<body style="margin:0;padding:0;overflow:hidden;width:100%;height:100%;background-color:#000;">
+  <div id="ruffle" class="gameloc" style="width:100%;height:100%;"></div> 
   <script>
-    // Get viewport dimensions immediately on execution
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     var swfobject = {};
     var isEmbedded = false;
 
     swfobject.embedSWF = function(url, cont, width, height) {
-        if (isEmbedded) return; 
-
-        // Access the Ruffle API
+        if (isEmbedded) return;
         const ruffle = window.RufflePlayer.newest();
         const container = document.getElementById(cont);
-        
         if (!container) {
             console.error("Container element not found");
             return;
         }
-
-        // Create the player element
         const player = ruffle.createPlayer();
         container.appendChild(player);
-
-        // Correctly assign properties and styles
         Object.assign(player, {
             width: width,
             height: height
         });
-
-        // Apply CSS styles properly
         player.style.width = width + 'px';
         player.style.height = height + 'px';
         player.style.display = 'block';
         player.style.border = 'none';
         player.style.padding = '0';
         player.style.margin = '0';
-
-        // Load the SWF file
         player.load({ url: url });
         isEmbedded = true;
     };
-         
-    // Trigger when DOM is ready
+
     document.addEventListener('DOMContentLoaded', function () {
       swfobject.embedSWF("https://justtyler-png.github.io/Flash-Games/tboi.swf", 'ruffle', viewportWidth, viewportHeight);
     });
