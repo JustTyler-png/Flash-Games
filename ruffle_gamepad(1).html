@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en" style="margin:0;padding:0;overflow:hidden;width:100%;height:100%;position:fixed;">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Ruffle Gamepad Layout</title>
+  <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    body {
+      margin: 0; padding: 0; overflow: hidden; width: 100vw; height: 100vh;
+      background-color: #000; font-family: sans-serif; position: fixed;
+    }
+    
+    /* Force landscape via rotation if screen height > width */
+    @media screen and (orientation: portrait) {
+      #orient-wrapper {
+        transform: rotate(-90deg);
+        transform-origin: left top;
+        width: 100vh;
+        height: 100vw;
+        position: absolute;
+        top: 100%;
+        left: 0;
+      }
+    }
+    @media screen and (orientation: landscape) {
+      #orient-wrapper {
+        width: 100vw;
+        height: 100vh;
+        position: relative;
+      }
+    }
+
+    #ruffle {
+      width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1;
+    }
+
+    /* Gamepad Overlay Container */
+    #gamepad-overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 9999; pointer-events: none;
+    }
+    
+    .interactive-element {
+      pointer-events: auto;
+      touch-action: none;
+    }
+
+    /* Joystick Configuration (Shrunk to 90px total outer) */
+    .joystick-container {
+      position: absolute; bottom: 20px; left: 20px;
+      width: 90px; height: 90px;
+      background: rgba(255, 255, 255, 0.15);
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    }
+    .joystick-knob {
+      width: 36px; height: 36px;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 50%; shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    /* Arrow D-Pad Button Grid (Compact layout) */
+    .dpad-container {
+      position: absolute; bottom: 20px; left: 130px;
+      display: grid; grid-template-columns: repeat(3, 35px); grid-template-rows: repeat(3, 35px);
+      gap: 3px;
+    }
+    .dpad-btn {
+      width: 35px; height: 35px; background: rgba(255, 255, 255, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 6px;
+      color: #fff; font-size: 14px; font-weight: bold; display: flex;
+      align-items: center; justify-content: center; text-shadow: 1px 1px 2px #000;
+    }
+    .dpad-btn:active { background: rgba(255, 255, 255, 0.5); }
+
+    /* Action Buttons Configuration (Shrunk sizes) */
+    .action-container {
+      position: absolute; bottom: 20px; right: 20px;
+      display: flex; gap: 10px; align-items: flex-end;
+    }
+    .action-btn {
+      background: rgba(255, 255, 255, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 50%;
+      color: #fff; font-weight: bold; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.3); text-shadow: 1px 1px 2px #000;
+    }
+    .action-btn:active { background: rgba(255, 255, 255, 0.5); }
+    
+    .btn-small { width: 38px; height: 38px; font-size: 14px; }
+    .btn-space { width: 75px; height: 38px; border-radius: 15px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div id="orient-wrapper">
+    <div id="ruffle" class="gameloc"></div> 
+    
+    <div id="gamepad-overlay">
+      <!-- Joystick for WASD -->
+      <div class="joystick-container interactive-element" id="joy-container">
+        <div class="joystick-knob" id="joy-knob"></div>
+      </div>
+
+      <!-- Arrow Key D-Pad Pad -->
+      <div class="dpad-container">
+        <div></div>
+        <div class="dpad-btn interactive-element" data-key="ArrowUp">▲</div>
+        <div></div>
+        <div class="dpad-btn interactive-element" data-key="ArrowLeft">◀</div>
+        <div></div>
+        <div class="dpad-btn interactive-element" data-key="ArrowRight">▶</div>
+        <div></div>
+        <div class="dpad-btn interactive-element" data-key="ArrowDown">▼</div>
+        <div></div>
+      </div>
+
+      <!-- Action Utility Pad for Q, E, Space -->
+      <div class="action-container">
+        <div class="action-btn btn-small interactive-element" data-key="q">Q</div>
+        <div class="action-btn btn-small interactive-element" data-key="e">E</div>
+        <div class="action-btn btn-space interactive-element" data-key=" ">SPACE</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Force active state mappings tracking to avoid interruption multi-touch bugs
+    const activeKeys = new Set();
+
+    function dispatchKey(keyName, isDown) {
+      if (isDown) {
+        if (!activeKeys.has(keyName)) {
+          activeKeys.add(keyName);
+          const e = new KeyboardEvent('keydown', { key: keyName, bubbles: true, cancelable: true });
+          window.dispatchEvent(e);
+          document.dispatchEvent(e);
+        }
+      } else {
+        if (activeKeys.has(keyName)) {
+          activeKeys.delete(keyName);
+          const e = new KeyboardEvent('keyup', { key: keyName, bubbles: true, cancelable: true });
+          window.dispatchEvent(e);
+          document.dispatchEvent(e);
+        }
+      }
+    }
+
+    // Dynamic Multi-touch Joystick Handling logic isolated per active Touch instance identifier
+    const joyContainer = document.getElementById('joy-container');
+    const joyKnob = document.getElementById('joy-knob');
+    const joyRadius = joyContainer.clientWidth / 2;
+    let joyTouchId = null;
+    let lastJoystickKeys = [];
+
+    function processJoystickMove(clientX, clientY) {
+      const rect = joyContainer.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      
+      let deltaX = clientX - centerX;
+      let deltaY = clientY - centerY;
+      const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+      
+      const maxDistance = joyRadius - 10;
+      if (distance > maxDistance) {
+        deltaX = (deltaX / distance) * maxDistance;
+        deltaY = (deltaY / distance) * maxDistance;
+      }
+      
+      joyKnob.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+      
+      // Compute keys based on directional threshold vectors 
+      const threshold = 12;
+      let currentKeys = [];
+      if (deltaY < -threshold) currentKeys.push('w');
+      if (deltaY > threshold) currentKeys.push('s');
+      if (deltaX < -threshold) currentKeys.push('a');
+      if (deltaX > threshold) currentKeys.push('d');
+      
+      // Release keys that are no longer actively calculated in the vector
+      lastJoystickKeys.forEach(k => {
+        if (!currentKeys.includes(k)) dispatchKey(k, false);
+      });
+      // Trigger down events for new paths
+      currentKeys.forEach(k => dispatchKey(k, true));
+      lastJoystickKeys = currentKeys;
+    }
+
+    joyContainer.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if (joyTouchId !== null) return; 
+      const touch = e.changedTouches[0];
+      joyTouchId = touch.identifier;
+      processJoystickMove(touch.clientX, touch.clientY);
+    }, { passive: false });
+
+    window.addEventListener('touchmove', (e) => {
+      if (joyTouchId === null) return;
+      for (let i = 0; i < e.touches.length; i++) {
+        if (e.touches[i].identifier === joyTouchId) {
+          processJoystickMove(e.touches[i].clientX, e.touches[i].clientY);
+          break;
+        }
+      }
+    }, { passive: false });
+
+    const stopJoystick = () => {
+      joyTouchId = null;
+      joyKnob.style.transform = 'translate(0px, 0px)';
+      lastJoystickKeys.forEach(k => dispatchKey(k, false));
+      lastJoystickKeys = [];
+    };
+
+    window.addEventListener('touchend', (e) => {
+      if (joyTouchId !== null) {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          if (e.changedTouches[i].identifier === joyTouchId) {
+            stopJoystick();
+            break;
+          }
+        }
+      }
+    });
+    window.addEventListener('touchcancel', (e) => {
+      if (joyTouchId !== null) {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          if (e.changedTouches[i].identifier === joyTouchId) {
+            stopJoystick();
+            break;
+          }
+        }
+      }
+    });
+
+    // Global Tracker Object for discrete touch interaction pads (Buttons & Arrows)
+    const activeElementTouches = {};
+
+    document.querySelectorAll('.dpad-btn, .action-btn').forEach(btn => {
+      const key = btn.getAttribute('data-key');
+      
+      btn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const touch = e.changedTouches[0];
+        activeElementTouches[touch.identifier] = key;
+        dispatchKey(key, true);
+      }, { passive: false });
+    });
+
+    window.addEventListener('touchend', (e) => {
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const id = e.changedTouches[i].identifier;
+        if (activeElementTouches[id] !== undefined) {
+          dispatchKey(activeElementTouches[id], false);
+          delete activeElementTouches[id];
+        }
+      }
+    });
+
+    window.addEventListener('touchcancel', (e) => {
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const id = e.changedTouches[i].identifier;
+        if (activeElementTouches[id] !== undefined) {
+          dispatchKey(activeElementTouches[id], false);
+          delete activeElementTouches[id];
+        }
+      }
+    });
+
+    // Ruffle Embedded Canvas Loader Context hook initialization
+    function initRuffle() {
+      const isPortrait = window.innerHeight > window.innerWidth;
+      const w = isPortrait ? window.innerHeight : window.innerWidth;
+      const h = isPortrait ? window.innerWidth : window.innerHeight;
+      
+      const ruffle = window.RufflePlayer.newest();
+      const container = document.getElementById('ruffle');
+      const player = ruffle.createPlayer();
+      container.appendChild(player);
+      
+      Object.assign(player, { width: w, height: h });
+      player.style.width = '100%';
+      player.style.height = '100%';
+      player.style.display = 'block';
+      player.style.border = 'none';
+      
+      player.load({ url: "https://justtyler-png.github.io/Flash-Games/tboi.swf" });
+    }
+
+    document.addEventListener('DOMContentLoaded', initRuffle);
+  </script>
+</body>
+</html>
