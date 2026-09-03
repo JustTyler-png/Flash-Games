@@ -12,8 +12,8 @@
 
   <script>
     // Get viewport dimensions immediately on execution
-    const screenWidth = window.screen.width;
-    const screenHeight = window.screen.height;
+    const availWidth = window.screen.availWidth;
+    const availHeight = window.screen.availHeight;
     var swfobject = {};
     var isEmbedded = false;
 
@@ -54,7 +54,7 @@
          
     // Trigger when DOM is ready
     document.addEventListener('DOMContentLoaded', function () {
-      swfobject.embedSWF("https://justtyler-png.github.io/Flash-Games/tboi.swf", 'ruffle', screenWidth, screenHeight);
+      swfobject.embedSWF("https://justtyler-png.github.io/Flash-Games/tboi.swf", 'ruffle', availWidth, availHeight);
     });
   </script>
 </body>
