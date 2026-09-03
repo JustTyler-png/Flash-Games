@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en" style="margin:0;padding:0;overflow:hidden;width:100%;height:100%;">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Ruffle Game with Virtual Controls</title>
+  <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+      background-color: #000;
+      font-family: Arial, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    #game-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+    /* Virtual Controls Overlay */
+    #controls-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      pointer-events: none; /* Let clicks pass through outside elements */
+    }
+    .control-element {
+      pointer-events: auto; /* Re-enable touch for actual buttons */
+    }
+    /* Joystick Styles */
+    #joystick-container {
+      position: absolute;
+      bottom: 40px;
+      left: 40px;
+      width: 140px;
+      height: 140px;
+      background: rgba(255, 255, 255, 0.15);
+      border: 3px solid rgba(255, 255, 255, 0.4);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+    }
+    #joystick-knob {
+      width: 60px;
+      height: 60px;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 50%;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      transition: transform 0.05s linear;
+    }
+    /* Action Buttons Styles */
+    #button-container {
+      position: absolute;
+      bottom: 40px;
+      right: 40px;
+      display: grid;
+      grid-template-columns: repeat(2, 70px);
+      grid-gap: 20px;
+      touch-action: none;
+    }
+    .action-btn {
+      width: 70px;
+      height: 70px;
+      background: rgba(255, 255, 255, 0.2);
+      border: 3px solid rgba(255, 255, 255, 0.5);
+      border-radius: 50%;
+      color: #fff;
+      font-size: 20px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+    .action-btn:active {
+      background: rgba(255, 255, 255, 0.5);
+      transform: scale(0.95);
+    }
+    #btn-space {
+      grid-column: span 2;
+      width: 160px;
+      border-radius: 35px;
+      height: 60px;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div id="ruffle" class="gameloc" style="width:100%;height:100%;"></div> 
+  </div>
+
+  <!-- Touch Overlay Layer -->
+  <div id="controls-overlay">
+    <!-- Left Side: Joystick for WASD -->
+    <div id="joystick-container" class="control-element">
+      <div id="joystick-knob"></div>
+    </div>
+
+    <!-- Right Side: Q, E, Space Buttons -->
+    <div id="button-container">
+      <div id="btn-q" class="action-btn control-element">Q</div>
+      <div id="btn-e" class="action-btn control-element">E</div>
+      <div id="btn-space" class="action-btn control-element">SPACE</div>
+    </div>
+  </div>
+
+  <script>
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    var swfobject = {};
+    var isEmbedded = false;
+
+    swfobject.embedSWF = function(url, cont, width, height) {
+        if (isEmbedded) return;
+        const ruffle = window.RufflePlayer.newest();
+        const container = document.getElementById(cont);
+        if (!container) {
+            console.error("Container element not found");
+            return;
+        }
+        const player = ruffle.createPlayer();
+        container.appendChild(player);
+        Object.assign(player, {
+            width: width,
+            height: height
+        });
+        player.style.width = width + 'px';
+        player.style.height = height + 'px';
+        player.style.display = 'block';
+        player.style.border = 'none';
+        player.style.padding = '0';
+        player.style.margin = '0';
+        player.load({ url: url });
+        isEmbedded = true;
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+      swfobject.embedSWF("https://justtyler-png.github.io/Flash-Games/tboi.swf", 'ruffle', viewportWidth, viewportHeight);
+      setupVirtualControls();
+    });
+
+    // Helper functions to dispatch simulated keyboard events directly to window
+    function dispatchKey(type, key, keyCode) {
+      const event = new KeyboardEvent(type, {
+        key: key,
+        code: key === ' ' ? 'Space' : 'Key' + key.toUpperCase(),
+        keyCode: keyCode,
+        which: keyCode,
+        bubbles: true,
+        cancelable: true
+      });
+      window.dispatchEvent(event);
+      
+      // Also target the Ruffle canvas/embed specifically if found
+      const rufflePlayer = document.querySelector('ruffle-player');
+      if (rufflePlayer) {
+        rufflePlayer.dispatchEvent(event);
+        const shadowCanvas = rufflePlayer.shadowRoot ? rufflePlayer.shadowRoot.querySelector('canvas') : null;
+        if (shadowCanvas) shadowCanvas.dispatchEvent(event);
+      }
+    }
+
+    function setupVirtualControls() {
+      // 1. Setup Action Buttons (Q, E, Space)
+      const buttons = [
+        { id: 'btn-q', key: 'q', code: 81 },
+        { id: 'btn-e', key: 'e', code: 69 },
+        { id: 'btn-space', key: ' ', code: 32 }
+      ];
+
+      buttons.forEach(btn => {
+        const element = document.getElementById(btn.id);
+        if (!element) return;
+
+        const startPress = (e) => {
+          e.preventDefault();
+          dispatchKey('keydown', btn.key, btn.code);
+        };
+
+        const endPress = (e) => {
+          e.preventDefault();
+          dispatchKey('keyup', btn.key, btn.code);
+        };
+
+        element.addEventListener('touchstart', startPress, { passive: false });
+        element.addEventListener('touchend', endPress, { passive: false });
+        element.addEventListener('mousedown', startPress);
+        element.addEventListener('mouseup', endPress);
+        element.addEventListener('mouseleave', endPress);
+      });
+
+      // 2. Setup Joystick for WASD mapping
+      const joystick = document.getElementById('joystick-container');
+      const knob = document.getElementById('joystick-knob');
+      
+      if (!joystick || !knob) return;
+
+      const maxRadius = 50; // Maximum distance knob can move from center
+      let joystickActive = false;
+      let startX = 0, startY = 0;
+      
+      // Keep track of which WASD keys are currently "pressed"
+      const activeWASD = { w: false, a: false, s: false, d: false };
+      const wasdMapping = {
+        w: { key: 'w', code: 87 },
+        a: { key: 'a', code: 65 },
+        s: { key: 's', code: 83 },
+        d: { key: 'd', code: 68 }
+      };
+
+      function updateWASD(targetKeys) {
+        // For each direction, check if state changed
+        ['w', 'a', 's', 'd'].forEach(k => {
+          if (targetKeys[k] && !activeWASD[k]) {
+            dispatchKey('keydown', wasdMapping[k].key, wasdMapping[k].code);
+            activeWASD[k] = true;
+          } else if (!targetKeys[k] && activeWASD[k]) {
+            dispatchKey('keyup', wasdMapping[k].key, wasdMapping[k].code);
+            activeWASD[k] = false;
+          }
+        });
+      }
+
+      function handleJoystickMove(currentX, currentY) {
+        let deltaX = currentX - startX;
+        let deltaY = currentY - startY;
+        let distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+        if (distance > maxRadius) {
+          deltaX = (deltaX / distance) * maxRadius;
+          deltaY = (deltaY / distance) * maxRadius;
+          distance = maxRadius;
+        }
+
+        knob.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+
+        // Key activation thresholds
+        const targetKeys = { w: false, a: false, s: false, d: false };
+        const threshold = 15; // Minimum move distance to trigger key
+
+        if (distance > threshold) {
+          // Calculate angle to determine directions (multi-direction support)
+          // Angle in radians: -PI to PI
+          const angle = Math.atan2(deltaY, deltaX);
+          
+          // Separate checks for combinations (e.g. up-right, down-left)
+          // X-axis mapping
+          if (deltaX > 15) targetKeys.d = true;
+          if (deltaX < -15) targetKeys.a = true;
+          // Y-axis mapping
+          if (deltaY > 15) targetKeys.s = true;
+          if (deltaY < -15) targetKeys.w = true;
+        }
+
+        updateWASD(targetKeys);
+      }
+
+      function resetJoystick() {
+        joystickActive = false;
+        knob.style.transform = 'translate(0px, 0px)';
+        updateWASD({ w: false, a: false, s: false, d: false });
+      }
+
+      // Touch events for Joystick
+      joystick.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        joystickActive = true;
+        const rect = joystick.getBoundingClientRect();
+        startX = rect.left + rect.width / 2;
+        startY = rect.top + rect.height / 2;
+        handleJoystickMove(e.touches[0].clientX, e.touches[0].clientY);
+      }, { passive: false });
+
+      window.addEventListener('touchmove', (e) => {
+        if (!joystickActive) return;
+        e.preventDefault();
+        handleJoystickMove(e.touches[0].clientX, e.touches[0].clientY);
+      }, { passive: false });
+
+      window.addEventListener('touchend', (e) => {
+        if (!joystickActive) return;
+        resetJoystick();
+      });
+
+      // Mouse fallback events for Joystick
+      joystick.addEventListener('mousedown', (e) => {
+        joystickActive = true;
+        const rect = joystick.getBoundingClientRect();
+        startX = rect.left + rect.width / 2;
+        startY = rect.top + rect.height / 2;
+        handleJoystickMove(e.clientX, e.clientY);
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!joystickActive) return;
+        handleJoystickMove(e.clientX, e.clientY);
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (!joystickActive) return;
+        resetJoystick();
+      });
+    }
+  </script>
+</body>
+</html>
